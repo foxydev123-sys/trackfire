@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101315">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Private low-poly tank battles for you and your friends, right in the browser.">
+<title>Trackfire</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f5a53c'/%3E%3Crect x='6' y='15' width='20' height='9' rx='2' fill='%231b1206'/%3E%3Crect x='11' y='10' width='10' height='7' rx='2' fill='%231b1206'/%3E%3Crect x='19' y='12' width='10' height='3' fill='%231b1206'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="ov" class="ov"></div>
+
+<!-- ============ LOADING ============ -->
+<div id="loading" class="loading"><div class="mn-logo small">TRACK<span>FIRE</span></div><p id="loadMsg">Loading 3D engine…</p></div>
+
+<!-- ============ MAIN MENU ============ -->
+<section id="scr-menu" class="screen" hidden>
+  <div class="menu-shade"></div>
+  <div class="menu-col">
+    <div class="mn-logo">TRACK<br><span>FIRE</span></div>
+    <p class="mn-tag">Private tank battles for you and your friends.</p>
+    <label class="fld" for="nameInp">CALLSIGN<input class="inp" id="nameInp" maxlength="14" autocomplete="off" placeholder="Your name" spellcheck="false"></label>
+    <button class="btn primary" id="btnPlay" type="button">PLAY <small id="playHint">NEW ROOM</small></button>
+    <button class="btn" id="btnCreate" type="button">CREATE ROOM <small>GET A CODE</small></button>
+    <div class="join"><input class="inp code" id="codeInp" placeholder="ROOM CODE" maxlength="5" autocomplete="off" spellcheck="false" aria-label="Room code"><button class="btn" id="btnJoin" type="button">JOIN</button></div>
+    <button class="btn" id="btnPractice" type="button">PRACTICE <small>VS BOTS · OFFLINE</small></button>
+    <button class="btn ghost" id="btnSettings" type="button">SETTINGS</button>
+    <p class="err" id="menuErr" hidden></p>
+    <p class="note" id="menuNote" hidden>This preview plays offline against bots. To play online with friends, put the server online (see DEPLOY.md) and open that address.</p>
+  </div>
+</section>
+
+<!-- ============ LOBBY ============ -->
+<section id="scr-lobby" class="screen" hidden>
+  <div class="menu-shade"></div>
+  <div class="lobby">
+    <div class="card lb-card">
+      <div class="lb-head">
+        <div><small>ROOM CODE · SEND IT TO FRIENDS</small><div class="code" id="lbCode">-----</div></div>
+        <div class="lb-share">
+          <button class="lb-copy" id="btnCopy" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M3 11V3a1 1 0 0 1 1-1h7"/></svg><span>COPY INVITE LINK</span></button>
+          <div class="lb-link" id="lbLink"></div>
+        </div>
+      </div>
+      <div class="lb-maps" id="lbMaps">
+        <button class="map" data-map="desert" type="button"><img id="thDesert" alt=""><span>Dune Crossing<small>DESERT · MEDIUM</small></span></button>
+        <button class="map" data-map="forest" type="button"><img id="thForest" alt=""><span>Pinewood Ford<small>FOREST · MEDIUM</small></span></button>
+      </div>
+      <div class="lb-mode">
+        <span class="seg" id="lbModeSeg"><button type="button" data-mode="tdm">TEAM DEATHMATCH</button><button type="button" data-mode="ffa">FREE FOR ALL</button></span>
+        <span id="lbCount">1 / 8 PLAYERS</span>
+      </div>
+      <ul class="lb-players" id="lbPlayers"></ul>
+      <p class="lb-note" id="lbNote"></p>
+      <div class="lb-actions">
+        <button class="btn" id="btnReady" type="button">READY</button>
+        <button class="btn" id="btnTeam" type="button">SWITCH TEAM</button>
+        <button class="btn" id="btnAddBot" type="button">+ BOT</button>
+        <button class="btn" id="btnDelBot" type="button">− BOT</button>
+        <button class="btn primary" id="btnStart" type="button">START MATCH</button>
+      </div>
+      <div class="lb-foot"><button class="btn ghost" id="btnLeave" type="button">LEAVE ROOM</button><button class="btn ghost" id="btnSettings2" type="button">SETTINGS</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ IN-GAME HUD ============ -->
+<div id="hud" class="hudwrap" hidden>
+  <div class="vl" id="hudVL">
+    <div class="vign" id="vign"></div>
+    <div class="killfeed" id="killfeed"></div>
+    <div class="h-score pnl" id="hScore">
+      <div class="team blue"><b id="sBlue">0</b><span id="sBlueLbl">BLUE</span></div>
+      <div class="clock"><span id="clock">10:00</span><small id="modeLbl">TEAM DEATHMATCH · TO 30</small></div>
+      <div class="team red"><span id="sRedLbl">RED</span><b id="sRed">0</b></div>
+    </div>
+    <div class="topright">
+      <div class="netchip pnl"><span class="dot" id="netDot"></span><span id="pingTxt">– ms</span><span class="sep">|</span><span id="roomTxt">ROOM</span></div>
+      <button class="m-btn pnl" id="btnScores" type="button" aria-label="Scoreboard"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+      <button class="m-btn pnl" id="btnPause" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
+    </div>
+    <div class="miniboard pnl" id="miniboard"></div>
+    <div class="connbar pnl" id="connBar" hidden>RECONNECTING…</div>
+    <div class="debug pnl" id="debug" hidden><div class="t">NETWORK / PERF <b>F3</b></div><div id="dbgRows"></div><canvas class="spark" id="spark" width="216" height="26"></canvas></div>
+    <div class="scoreboard pnl" id="scoreboard" hidden></div>
+    <div class="deathcard pnl" id="deathcard" hidden><div class="big">DESTROYED BY <b id="dcKiller">?</b></div><p>RESPAWNING IN <span id="dcTime">4</span> · SPAWN PROTECTION 2.5 S</p></div>
+    <div class="endcard pnl" id="endcard" hidden></div>
+    <div class="keys" id="keys">
+      <span class="pnl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</span>
+      <span class="pnl"><kbd>MOUSE</kbd> aim</span><span class="pnl"><kbd>CLICK</kbd> fire</span>
+      <span class="pnl"><kbd>TAB</kbd> scores</span><span class="pnl"><kbd>ESC</kbd> menu</span>
+    </div>
+    <div class="h-health pnl" id="hHealth">
+      <div class="hh-top"><span class="hh-name" id="hhName">You</span><span class="hh-num"><b id="hpNum">100</b> / 100</span></div>
+      <div class="hh-bar"><div class="lag" id="hpLag"></div><i id="hpBar"></i><div class="ticks"></div></div>
+      <div class="hh-sub" id="hhSub">BLUE TEAM</div>
+    </div>
+    <div class="h-reload pnl" id="hReload">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect x="12" y="6" width="10" height="20" rx="2" fill="#d9a441"/><path d="M12 10 Q17 0 22 10Z" fill="#f1c56a"/><rect x="11" y="24" width="12" height="5" rx="1" fill="#9a6a24"/></svg>
+      <div class="hr-body"><div class="hr-label"><span id="rlLabel" class="ready">READY</span><em id="rlTime"></em></div><div class="hr-bar"><i id="rlBar"></i></div></div>
+    </div>
+    <div class="minimap pnl" id="minimap"><canvas id="mm" width="300" height="300"></canvas><span class="compass">N</span></div>
+  </div>
+</div>
+
+<!-- touch controls live in an unscaled layer so fingers map 1:1 -->
+<div id="touch" class="touch" hidden>
+  <div class="stick l" id="moveBase"><div class="knob" id="moveKnob"></div><small>MOVE</small></div>
+  <div class="stick r" id="aimBase"><div class="knob" id="aimKnob"></div><small>AIM</small></div>
+  <div class="firebtn" id="fireBtn"><svg viewBox="0 0 152 152" aria-hidden="true"><circle cx="76" cy="76" r="70" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="7"/><circle id="fireRing" cx="76" cy="76" r="70" fill="none" stroke="#ffd27a" stroke-width="7" stroke-linecap="round" transform="rotate(-90 76 76)" stroke-dasharray="439.8" stroke-dashoffset="0"/></svg><span>FIRE</span></div>
+  <div class="abil a1">SOON</div><div class="abil a2">SOON</div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div id="pause" class="modal" hidden>
+  <div class="card modal-card">
+    <h4>MENU</h4>
+    <button class="btn primary" id="btnResume" type="button">RESUME</button>
+    <button class="btn" id="btnSettings3" type="button">SETTINGS</button>
+    <button class="btn" id="btnEndMatch" type="button">END MATCH (HOST)</button>
+    <button class="btn" id="btnFullscreen" type="button">FULLSCREEN</button>
+    <button class="btn ghost" id="btnQuit" type="button">LEAVE MATCH</button>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div id="settings" class="modal" hidden>
+  <div class="card modal-card wide">
+    <h4>SETTINGS</h4>
+    <div class="set-grid">
+      <div>
+        <div class="st-row"><span>Graphics</span><span class="seg" data-set="quality"><button type="button" data-v="low">LOW</button><button type="button" data-v="medium">MED</button><button type="button" data-v="high">HIGH</button></span></div>
+        <div class="st-row"><span>Shadows</span><button type="button" class="tg" data-set="shadows"></button></div>
+        <div class="st-row"><span>Particles</span><span class="seg" data-set="particles"><button type="button" data-v="low">LOW</button><button type="button" data-v="full">FULL</button></span></div>
+        <div class="st-row"><span>Render scale</span><span class="rng"><input type="range" min="50" max="100" step="5" data-set="renderScale" aria-label="Render scale"><em></em></span></div>
+        <div class="st-row"><span>Auto resolution (keeps FPS up)</span><button type="button" class="tg" data-set="autoRes"></button></div>
+        <div class="st-row"><span>Time of day</span><span class="seg" data-set="sun"><button type="button" data-v="morning">MORNING</button><button type="button" data-v="midday">MIDDAY</button><button type="button" data-v="golden">GOLDEN</button></span></div>
+        <div class="st-row"><span>Camera shake</span><button type="button" class="tg" data-set="shake"></button></div>
+      </div>
+      <div>
+        <div class="st-row"><span>PC controls</span><span class="seg" data-set="controls"><button type="button" data-v="dir">DIRECTION</button><button type="button" data-v="classic">CLASSIC</button></span></div>
+        <div class="st-row"><span>Touch controls</span><span class="seg" data-set="touch"><button type="button" data-v="auto">AUTO</button><button type="button" data-v="on">ON</button><button type="button" data-v="off">OFF</button></span></div>
+        <div class="st-row"><span>Master</span><span class="rng"><input type="range" min="0" max="100" data-set="master" aria-label="Master volume"><em></em></span></div>
+        <div class="st-row"><span>Music</span><span class="rng"><input type="range" min="0" max="100" data-set="music" aria-label="Music volume"><em></em></span></div>
+        <div class="st-row"><span>SFX</span><span class="rng"><input type="range" min="0" max="100" data-set="sfx" aria-label="Effects volume"><em></em></span></div>
+        <div class="st-row"><span>Mute all</span><button type="button" class="tg" data-set="mute"></button></div>
+        <div class="st-row"><span>Debug panel (F3)</span><button type="button" class="tg" data-set="debug"></button></div>
+      </div>
+    </div>
+    <details class="nettest"><summary>Network test tools (for developers)</summary>
+      <p>Adds fake delay to this browser's connection so you can check that other tanks still move smoothly.</p>
+      <div class="st-row"><span>Simulated ping</span><span class="seg" id="simPing"><button type="button" data-v="0">OFF</button><button type="button" data-v="20">20</button><button type="button" data-v="50">50</button><button type="button" data-v="100">100</button><button type="button" data-v="150">150 MS</button></span></div>
+      <div class="st-row"><span>Jitter</span><span class="seg" id="simJit"><button type="button" data-v="0">0</button><button type="button" data-v="10">±10</button><button type="button" data-v="30">±30</button><button type="button" data-v="60">±60 MS</button></span></div>
+    </details>
+    <p class="set-hint">Controls — PC: WASD drive · mouse aim · click/Space fire · Tab scores · Esc menu · F3 debug. Phone: left thumb drives, right thumb aims, hold FIRE.</p>
+    <button class="btn primary" id="btnCloseSettings" type="button">DONE</button>
+  </div>
+</div>
+
+<div id="rotate" class="rotate" hidden><div><svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="#f5a53c" stroke-width="3"><rect x="20" y="8" width="24" height="44" rx="4"/><path d="M50 40a18 18 0 0 1-18 18M50 40l-5 1M50 40l1 5"/></svg><p>Turn your phone sideways to play</p></div></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="server-config.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "trackfire",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Private browser multiplayer tank game (low-poly 3D, WebSockets).",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "bots": "node tools/bots.js",
+    "test": "node tools/net-test.js"
+  }
+}

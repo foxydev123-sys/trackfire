@@ -1,0 +1,12 @@
+# One-click Render deploy (Dashboard → New → Blueprint → pick this repo).
+services:
+  - type: web
+    name: trackfire
+    runtime: node
+    plan: free
+    buildCommand: "echo no build step"
+    startCommand: "node server/index.js"
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
